@@ -281,6 +281,31 @@ class YtDlpDownloadService(DownloadService):
 
 
 class TikTokService:
+    _TIKTOK_HEADERS = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/122.0.0.0 Safari/537.36"
+        ),
+        "Accept": "*/*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Origin": "https://www.tiktok.com",
+        "Referer": "https://www.tiktok.com/",
+    }
+
+    @staticmethod
+    def _apply_tiktok_common_opts(ydl_opts: Dict[str, object]) -> None:
+        headers = dict(TikTokService._TIKTOK_HEADERS)
+        user_agent = os.getenv("TIKTOK_USER_AGENT")
+        if user_agent:
+            headers["User-Agent"] = user_agent
+        ydl_opts["http_headers"] = headers
+        ydl_opts["geo_bypass"] = True
+
+        proxy = os.getenv("TIKTOK_PROXY")
+        if proxy:
+            ydl_opts["proxy"] = proxy
+
     def download_video(self, data: DirectDownloadRequest, background_tasks: BackgroundTasks):
         ffmpeg_available = shutil.which("ffmpeg") is not None
         temp_dir = Path(tempfile.mkdtemp(prefix="tiktok-"))
@@ -296,6 +321,7 @@ class TikTokService:
             "no_warnings": True,
             "noplaylist": True,
         }
+        self._apply_tiktok_common_opts(ydl_opts)
 
         if ffmpeg_available:
             ydl_opts["merge_output_format"] = "mp4"
@@ -371,6 +397,7 @@ class TikTokService:
             "skip_download": True,
             "ignoreerrors": True,
         }
+        self._apply_tiktok_common_opts(ydl_opts)
 
         if data.platform.lower() in COOKIE_REQUIRED_PLATFORMS and os.path.exists(COOKIE_FILE):
             ydl_opts["cookiefile"] = COOKIE_FILE
